@@ -77,9 +77,6 @@ class MiVentana(QMainWindow):
         file.close()
 
     def on_Cargar(self):
-        self.tabla.clearContents()
-        self.countRow = 0
-        self.tabla.setRowCount(self.countRow)
 
         load = QFileDialog.getOpenFileNames(self,  
                                     "Cargar archivo",  
@@ -87,14 +84,18 @@ class MiVentana(QMainWindow):
                                     "CSV Files (*.csv)",  options=QFileDialog.DontUseNativeDialog)
         if len(load[1]) == 0:
             return 0
-        archivo = open(''.join(load[0]))
-        lector_csv = csv.reader(archivo)
+        else:
+            self.tabla.clearContents()
+            self.countRow = 0
+            self.tabla.setRowCount(self.countRow)
+            archivo = open(''.join(load[0]))
+            lector_csv = csv.reader(archivo)
 
-        for y in lector_csv:
-            self.tabla.insertRow(self.countRow)
-            for i in range(3):
-                self.tabla.setItem(self.countRow, i,QTableWidgetItem(y[i]))
-            self.countRow += 1
+            for y in lector_csv:
+                self.tabla.insertRow(self.countRow)
+                for i in range(3):
+                    self.tabla.setItem(self.countRow, i,QTableWidgetItem(y[i]))
+                self.countRow += 1
 
 
 
