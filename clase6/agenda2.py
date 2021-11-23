@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QMainWindow, QApplication, QTableWidgetItem, QMessageBox, QFileDialog
 from PyQt5 import uic
 import csv
+import sqlite3
 
 class MiVentana(QMainWindow):
     def __init__(self):
@@ -12,8 +13,8 @@ class MiVentana(QMainWindow):
         self.botonCargar.clicked.connect(self.on_Cargar)
         # Pop mensaje
         self.msg = QMessageBox()
-        self.msg.setWindowTitle('Error')
-        self.msg.setIcon(QMessageBox.Warning)
+        self.msg.setWindowTitle('Notificación')
+        self.msg.setIcon(QMessageBox.Information)
 
         # Contador de filas
         self.countRow = 0
@@ -52,23 +53,32 @@ class MiVentana(QMainWindow):
     def on_Eliminar(self):
         selec = self.tabla.currentRow()
         if self.tabla.rowCount() > 0 and self.tabla.selectedItems():
-            self.tabla.removeRow(selec)
-            self.countRow = self.tabla.rowCount()
+            self.msg.setText(f'¿Quieres eliminar la fila: {selec+1}?')
+            self.msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            validar = self.msg.exec()
+            if validar == QMessageBox.Yes:
+                self.tabla.removeRow(selec)
+                self.countRow = self.tabla.rowCount()
         else:
-            self.msg.setText('No hay nada seleccionado')
+            self.msg.setStandardButtons(QMessageBox.Ok)
+            self.msg.setText('Tienes que seleccionar una fila')
             self.msg.exec()
 
     def on_Guardar(self):    
         save = QFileDialog.getSaveFileName(self,  
                                     "Guardar archivo",  
                                     "/home/joyce/Documentos/programacion/laboratorio_II/clase6", # Ruta de inicio 
-                                    "CSV Files (*.csv)",  options=QFileDialog.DontUseNativeDialog)
+                                    "CSV Files (*.db)",  options=QFileDialog.DontUseNativeDialog)
+        
         if save[0] == '':
             return 0
-        if save[1] == 'CSV Files (*.csv)' and not '.csv' in save[0]:
-            save = save[0] + '.csv'
+        if save[1] == 'CSV Files (*.db' and not '.db' in save[0]:
+            save = save[0] + '.db'
         else:
             save = save[0]
+        archivo = save[0] + '.db'
+        con = sqlite3.connect("archivo")
+        print(dir(con))
         file = open(save, 'w')
         escritor_csv = csv.writer(file, delimiter=',', quotechar='"')
         for row in range(self.tabla.rowCount()):
