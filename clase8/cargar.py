@@ -35,7 +35,7 @@ class MiVentana(QMainWindow):
     def validador(self):
         labels = self.nombre, self.apellido, self.email, self.telefono, self.direccion, self.nacimiento, self.peso, self.altura
 
-        if self.verificador(labels):
+        if self.verificador(labels) and len(labels[7].text()) > 2:
             self.botonAgregar.setEnabled(True)
             self.flag = 1
     def verificador(self, formulario):
@@ -46,6 +46,7 @@ class MiVentana(QMainWindow):
                 retorno = False
                 break
         return retorno
+
     def buscadorIndex(self, check):
         for i in range(len(self.listaBD)):
             if self.listaBD[i][0] == check:
@@ -78,6 +79,7 @@ class MiVentana(QMainWindow):
         self.botonEditar.setEnabled(False)
         self.botonEliminar.setEnabled(False)
         self.botonAgregar.setEnabled(False)
+        self.botonGuardar.setEnabled(False)
         self.on_agregar()
 
         if not self.lista:
@@ -91,7 +93,7 @@ class MiVentana(QMainWindow):
                 formatoLista = [usuario[0],usuario[1],usuario[2],usuario[3],usuario[4],usuario[5],usuario[6], usuario[7], usuario[8], self.status]
                 formatoQt = f'''
     {usuario[0]}. {usuario[1]:4} {usuario[2]} 
-        {usuario[3]:}         '''
+          {usuario[3]:}         '''
                 self.lista.addItem(formatoQt)
                 self.listaBD.append(formatoLista)
         else:
@@ -108,45 +110,48 @@ class MiVentana(QMainWindow):
         mydialog.setModal(True)
 
         # Almacenamos en una lista los datos del usuario seleccionado
-        click = self.lista.currentItem().text().split()
-        click = int(click[0].strip(".")) - 1
-        usuario = self.listaBD[click]
+        usuario = self.lista.currentItem().text().split()
+        click = int(usuario[0].strip("."))
 
+        posicion = self.buscadorIndex(click)
         
         # Establecemos el usuario seleccionado en los label de la clase dialog
         labels = mydialog.nombre, mydialog.apellido, mydialog.email, mydialog.telefono, mydialog.direccion, mydialog.nacimiento, mydialog.peso, mydialog.altura
+        
         for num, label in enumerate(labels):
-            label.setText(usuario[num+1])
-        mydialog.exec()
-
+            label.setText(str(self.listaBD[posicion][num+1]))
+        ok = mydialog.exec()
         # Verificar contenidos de labels
-
-        if self.verificador(labels):
+        if self.verificador(labels)  and ok:
             formato = f'''
     {usuario[0]} {mydialog.nombre.text().capitalize():4} {mydialog.apellido.text().capitalize()} 
         {mydialog.email.text().capitalize():}         '''
 
-            for num, label in enumerate(labels):
-                self.listaBD[click][num+1] = label.text()
 
+            for num, label in enumerate(labels):
+                self.listaBD[posicion][num+1] = label.text()
             self.lista.currentItem().setText(formato)
+
+
+            self.listaBD[posicion][9]  = "editado"
             self.lista.setCurrentItem(self.lista.currentItem())
+            print(self.listaBD[posicion])
+            self.botonGuardar.setEnabled(True)
             self.on_click()
 
 
     def on_eliminar(self):
         # Separamos nombre, apellido y mail, para su posterior uso
         usuario = self.lista.currentItem().text().split()
-        click = int(usuario[0].strip(".")) - 1
-        click2 = click + 1
-        posicion = self.buscadorIndex(click2)
-        print(posicion)
+        click = int(usuario[0].strip("."))
+        posicion = self.buscadorIndex(click)
         self.msg.setText(f'¿Intentas eliminar el usuario {usuario[0]} {usuario[1]} {usuario[2]}?')
         self.msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         returnValue = self.msg.exec()
         if returnValue == QMessageBox.Yes:
             self.listaBD[posicion][9]  = "borrado"
             self.lista.takeItem(self.lista.currentRow())
+            self.botonGuardar.setEnabled(True)
             
     def on_agregar(self):
         labels = self.id_, self.nombre,self.apellido,self.email, self.telefono, self. direccion, self. nacimiento, self.peso, self.altura
@@ -182,22 +187,33 @@ class MiVentana(QMainWindow):
                 # Seleccionamos el ultimo usuario agregado 
                 self.flag = 0
                 self.lista.setCurrentRow(seleccionar)
+                self.botonGuardar.setEnabled(True)
                 self.on_click()
 
     
     def on_guardar(self):
-        self.cursor.execute('select * from usuarios')
-        post = self.cursor.fetchall()
 
-        for i in self.listaBD:
-            if i[9] == "borrado":
-                print(i, 'borrado')
-                self.cursor.execute(f'DELETE FROM usuarios WHERE id = ("{i[0]}")')
-                self.conexion.commit()
-            elif i[9] == 'agregado':
-                print(i, 'agregado')
-                self.cursor.execute("insert into usuarios (nombre,apellido,mail,telefono,direccion,nacimiento,altura,peso) values ('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}')".format(i[1],  i[2], i[3], i[4], i[5], i[6], i[7], i[8]))
-                self.conexion.commit()
+        self.msg.setText(f'''¿Quieres guardar los cambios en la base de datos?''')
+        self.msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        returnValue = self.msg.exec()
+        if returnValue == QMessageBox.Yes:
+            for i in self.listaBD:
+                if i[9] == "borrado":
+                    print(i, 'borrado')
+                    self.cursor.execute(f'DELETE FROM usuarios WHERE id = ("{i[0]}")')
+                    self.conexion.commit()
+                elif i[9] == 'agregado':
+                    print(i, 'agregado')
+                    self.cursor.execute("insert into usuarios (nombre,apellido,mail,telefono,direccion,nacimiento,altura,peso) values ('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}')".format(i[1],  i[2], i[3], i[4], i[5], i[6], i[7], i[8]))
+                    self.conexion.commit()
+                elif i[9] == 'editado':
+                    self.cursor.execute(f"""UPDATE usuarios set nombre = 
+                    ('{i[1]}'), apellido = ('{i[2]}'), mail = ('{i[3]}'), 
+                    telefono = ('{i[4]}'), direccion = ('{i[5]}'),
+                    nacimiento = ('{i[5]}'), altura  = ('{i[6]}'),
+                    peso = ('{i[7]}')
+                    WHERE id = ('{i[0]}')""")
+                    self.conexion.commit()
 
             
 class dialog(QDialog):
